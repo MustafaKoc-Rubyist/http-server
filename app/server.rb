@@ -7,8 +7,14 @@ loop do
   client = server.accept
   _, path, _ = client.gets.split
   
-  response = path == "/" ? "Hello World!" : ""
-  status = path == "/" ? "200 OK" : "404 Not Found"
+  
+  response = ""
+  status = "404 Not Found"
+  
+  if path.start_with?("/echo/")
+    response = path[6..-1]
+    status = "200 OK"
+  end
   
   client.puts "HTTP/1.1 #{status}\r\nContent-Type: text/plain\r\nContent-Length: #{response.bytesize}\r\n\r\n#{response}"
   client.close
