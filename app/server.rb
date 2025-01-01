@@ -4,19 +4,12 @@ server = TCPServer.new("localhost", 4221)
 puts "Server is running on localhost:4221"
 
 loop do
-  client_socket, client_address = server.accept
+  client = server.accept
+  _, path, _ = client.gets.split
   
-
-  response = "Hello World!"
+  response = path == "/" ? "Hello World!" : ""
+  status = path == "/" ? "200 OK" : "404 Not Found"
   
-  headers = [
-    "HTTP/1.1 200 OK",
-    "Content-Type: text/plain",
-    "Content-Length: #{response.bytesize}",
-    "",
-    response
-  ].join("\r\n")
-  
-  client_socket.puts(headers)
-  client_socket.close
+  client.puts "HTTP/1.1 #{status}\r\nContent-Type: text/plain\r\nContent-Length: #{response.bytesize}\r\n\r\n#{response}"
+  client.close
 end
