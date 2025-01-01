@@ -10,12 +10,9 @@ loop do
   
   response = ""
   status = "404 Not Found"
-  
-  if path.start_with?("/echo/")
-    response = path[6..-1]
-    status = "200 OK"
-  end
-  
+  status = "200 OK" if path == "/" || path.start_with?("/echo/")
+
+  response = path[6..-1] if path.start_with?("/echo/")  
   client.puts "HTTP/1.1 #{status}\r\nContent-Type: text/plain\r\nContent-Length: #{response.bytesize}\r\n\r\n#{response}"
   client.close
 end
