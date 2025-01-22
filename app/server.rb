@@ -9,7 +9,9 @@ class HTTPServer
   def start
     loop do
       client_socket = @server.accept
-      handle_request(client_socket)
+      Thread.new(client_socket) do |client|
+        handle_request(client)
+      end
     end
   end
 
