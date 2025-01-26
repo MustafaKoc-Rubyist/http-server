@@ -1,4 +1,5 @@
 require "socket"
+require 'optparse'
 
 class HTTPServer
   def initialize(host = "localhost", port = 4221)
@@ -39,7 +40,8 @@ class HTTPServer
                 }
               when /^\/files\/.+/
                 file_name = request_path.delete_prefix("/files/")
-                file_path = "/tmp/#{file_name}"
+                directory = get_directory
+                file_path = "#{directory}/#{file_name}"
                 content_type, response = generate_file_response(client, file_path)
                 response
               when "/user-agent"
@@ -94,6 +96,20 @@ class HTTPServer
     end
 
     return content_type, response
+  end
+
+  def get_directory
+    options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: app/server.rb [options]"
+
+      opts.on("--directory DIRECTORY", "Specify the directory where files are stored") do |dir|
+        options[:directory] = dir
+      end
+    end.parse!
+
+    directory = options[:directory] || "tmp"
+    directory
   end
 end
 
