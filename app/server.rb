@@ -28,6 +28,7 @@ class HTTPServer
     }
 
     # Route handling based on request path
+    content_type = "text/plain"
     response = case request_path
               when "/"
                 { status: "200 OK", body: "" }
@@ -36,6 +37,11 @@ class HTTPServer
                   status: "200 OK",
                   body: request_path.delete_prefix("/echo/")
                 }
+              when /^\/files\/.+/
+                file_name = request_path.delete_prefix("/files/")
+                file_path = "/tmp/#{file_name}"
+                content_type, response = generate_file_response(client, file_path)
+                response
               when "/user-agent"
                 headers = extract_headers(client)
                 {
@@ -46,7 +52,7 @@ class HTTPServer
                 { status: "404 Not Found", body: "" }
               end
 
-    send_response(client, response)
+    send_response(client, response, content_type)
   end
 
   def extract_headers(client)
@@ -58,10 +64,10 @@ class HTTPServer
     headers
   end
 
-  def send_response(client, response)
+  def send_response(client, response, content_type = "text/plain")
     http_response = [
       "HTTP/1.1 #{response[:status]}",
-      "Content-Type: text/plain",
+      "Content-Type: #{content_type}",
       "Content-Length: #{response[:body].bytesize}",
       "",
       response[:body]
@@ -70,6 +76,24 @@ class HTTPServer
     client.puts(http_response)
   ensure
     client.close
+  end
+
+  def generate_file_response(client, file_path)
+    response =if File.exist?(file_path)
+      content_type= "application/octet-stream"
+      { 
+        status: "200 OK",
+        body: File.read(file_path)
+      }
+    else
+      content_type= "text/plain"
+      { 
+        status: "404 Not Found",
+        body: ""
+      }
+    end
+
+    return content_type, response
   end
 end
 
