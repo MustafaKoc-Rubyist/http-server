@@ -10,9 +10,7 @@ class HTTPServer
   def start
     loop do
       client_socket = @server.accept
-      Thread.new(client_socket) do |client|
-        handle_request(client)
-      end
+      Thread.new(client_socket) { |client| handle_request(client) }
     end
   end
 
@@ -20,41 +18,53 @@ class HTTPServer
 
   def handle_request(client)
     request_line = client.gets
-    _, request_path, _ = request_line.split
+    method, request_path, version = request_line.split
 
+    headers = extract_headers(client)
+    response = process_request(method, request_path, headers, client)
 
-    response = {
-      body: "",
-      status: "404 Not Found"
-    }
+    send_response(client, response)
+  end
 
-    # Route handling based on request path
-    content_type = "text/plain"
-    response = case request_path
-              when "/"
-                { status: "200 OK", body: "" }
-              when /^\/echo\/.+/
-                { 
-                  status: "200 OK",
-                  body: request_path.delete_prefix("/echo/")
-                }
-              when /^\/files\/.+/
-                file_name = request_path.delete_prefix("/files/")
-                directory = get_directory
-                file_path = "#{directory}/#{file_name}"
-                content_type, response = generate_file_response(client, file_path)
-                response
-              when "/user-agent"
-                headers = extract_headers(client)
-                {
-                  status: "200 OK",
-                  body: headers["User-Agent"]
-                }
-              else
-                { status: "404 Not Found", body: "" }
-              end
+  def process_request(method, request_path, headers, client)
+    case request_path
+    when "/"
+      { status: "200 OK", body: "" }
+    when /^\/echo\/.+/
+      { status: "200 OK", body: request_path.delete_prefix("/echo/") }
+    when /^\/files\/.+/
+      handle_file_request(method, request_path, headers, client)
+    when "/user-agent"
+      { status: "200 OK", body: headers["User-Agent"] }
+    else
+      { status: "404 Not Found", body: "" }
+    end
+  end
 
-    send_response(client, response, content_type)
+  def handle_file_request(method, request_path, headers, client)
+    file_name = extract_file_name(request_path)
+    directory = get_output_file_directory
+    file_path = "#{directory}/#{file_name}"
+
+    if method == "GET"
+      content_type, response = generate_file_response(client, file_path)
+      response
+    elsif method == "POST"
+      request_body = read_request_body(headers, client)
+      write_to_file(file_path, request_body)
+      { status: "201 Created", body: "" }
+    else
+      { status: "405 Method Not Allowed", body: "" }
+    end
+  end
+
+  def read_request_body(headers, client)
+    content_length = headers["Content-Length"].to_i
+    client.read(content_length)
+  end
+
+  def write_to_file(file_path, content)
+    File.open(file_path, "w") { |file| file.write(content) }
   end
 
   def extract_headers(client)
@@ -63,6 +73,7 @@ class HTTPServer
       key, value = line.split(": ", 2)
       headers[key] = value.chomp if key && value
     end
+    puts headers
     headers
   end
 
@@ -74,31 +85,22 @@ class HTTPServer
       "",
       response[:body]
     ].join("\r\n")
-    
+
     client.puts(http_response)
   ensure
     client.close
   end
 
   def generate_file_response(client, file_path)
-    response =if File.exist?(file_path)
-      content_type= "application/octet-stream"
-      { 
-        status: "200 OK",
-        body: File.read(file_path)
-      }
+    if File.exist?(file_path)
+      content_type = "application/octet-stream"
+      { status: "200 OK", body: File.read(file_path) }
     else
-      content_type= "text/plain"
-      { 
-        status: "404 Not Found",
-        body: ""
-      }
+      { status: "404 Not Found", body: "" }
     end
-
-    return content_type, response
   end
 
-  def get_directory
+  def get_output_file_directory
     options = {}
     OptionParser.new do |opts|
       opts.banner = "Usage: app/server.rb [options]"
@@ -108,8 +110,11 @@ class HTTPServer
       end
     end.parse!
 
-    directory = options[:directory] || "tmp"
-    directory
+    options[:directory] || "tmp"
+  end
+
+  def extract_file_name(request_path)
+    request_path.delete_prefix("/files/")
   end
 end
 
