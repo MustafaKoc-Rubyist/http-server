@@ -48,7 +48,7 @@ class HTTPServer
   def handle_file_request(method, request_path, headers, client)
     file_name = extract_file_name(request_path)
     directory = get_output_file_directory
-    file_path = "#{directory}/#{file_name}"
+    file_path = "#{directory}#{file_name}"
 
     if method == "GET"
       content_type, response = generate_file_response(client, file_path)
@@ -96,12 +96,14 @@ class HTTPServer
   end
 
   def generate_file_response(client, file_path)
-    if File.exist?(file_path)
+    response = if File.exist?(file_path)
       content_type = "application/octet-stream"
       { status: "200 OK", body: File.read(file_path) }
     else
+      content_type = "text/plain"
       { status: "404 Not Found", body: "" }
     end
+    return content_type, response
   end
 
   def get_output_file_directory
