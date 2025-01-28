@@ -23,6 +23,10 @@ class HTTPServer
     headers = extract_headers(client)
     response = process_request(method, request_path, headers, client)
 
+    if response.nil?
+      response = { status: "500 Internal Server Error", body: "An error occurred" }
+    end
+
     send_response(client, response)
   end
 
