@@ -53,17 +53,21 @@ class HTTPServer
     directory = get_output_file_directory
     file_path = "#{directory}#{file_name}"
     content_type = "text/plain"
-
-    if method == "GET"
+    response = if method == "GET"
       content_type, response = generate_file_response(client, file_path)
       response
     elsif method == "POST"
-      request_body = read_request_body(headers, client)
-      write_to_file(file_path, request_body)
-      { status: "201 Created", body: "" }
+      begin
+        request_body = read_request_body(headers, client)
+        write_to_file(file_path, request_body)
+        { status: "201 Created", body: "" }
+      rescue => e
+        { status: "500 Internal Server Error", body: e.message }
+      end
     else
       { status: "405 Method Not Allowed", body: "" }
     end
+    
     [content_type, response]
   end
 
