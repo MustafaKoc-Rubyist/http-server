@@ -21,34 +21,38 @@ class HTTPServer
     method, request_path, version = request_line.split
 
     headers = extract_headers(client)
-    response = process_request(method, request_path, headers, client)
+    content_type, response = process_request(method, request_path, headers, client)
 
     if response.nil?
       response = { status: "500 Internal Server Error", body: "An error occurred" }
     end
 
-    send_response(client, response)
+    send_response(client, response, content_type)
   end
 
   def process_request(method, request_path, headers, client)
-    case request_path
+    content_type = "text/plain"
+    response = case request_path
     when "/"
       { status: "200 OK", body: "" }
     when /^\/echo\/.+/
       { status: "200 OK", body: request_path.delete_prefix("/echo/") }
     when /^\/files\/.+/
-      handle_file_request(method, request_path, headers, client)
+      content_type, response = handle_file_request(method, request_path, headers, client)
+      response
     when "/user-agent"
       { status: "200 OK", body: headers["User-Agent"] }
     else
       { status: "404 Not Found", body: "" }
     end
+    [content_type, response]
   end
 
   def handle_file_request(method, request_path, headers, client)
     file_name = extract_file_name(request_path)
     directory = get_output_file_directory
     file_path = "#{directory}#{file_name}"
+    content_type = "text/plain"
 
     if method == "GET"
       content_type, response = generate_file_response(client, file_path)
@@ -60,6 +64,7 @@ class HTTPServer
     else
       { status: "405 Method Not Allowed", body: "" }
     end
+    [content_type, response]
   end
 
   def read_request_body(headers, client)
@@ -77,7 +82,6 @@ class HTTPServer
       key, value = line.split(": ", 2)
       headers[key] = value.chomp if key && value
     end
-    puts headers
     headers
   end
 
