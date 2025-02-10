@@ -1,16 +1,17 @@
 module HTTPServer
   class Response
-    attr_reader :status, :body, :content_type
+    attr_reader :status, :body, :content_type, :content_encoding
 
-    def initialize(status:, body: "", content_type: "text/plain")
+    def initialize(status:, body: "", content_type: "text/plain", content_encoding: nil)
       @status = status
       @body = body
       @content_type = content_type
+      @content_encoding = content_encoding
     end
 
     class << self
-      def ok(body = "", content_type = "text/plain")
-        new(status: "200 OK", body: body, content_type: content_type)
+      def ok(body = "", content_type = "text/plain", content_encoding = nil)
+        new(status: "200 OK", body: body, content_type: content_type, content_encoding: content_encoding)
       end
 
       def created

@@ -1,7 +1,11 @@
 module HTTPServer
   class RootHandler
     def handle(request)
-      Response.ok
+      if request.accepts_gzip?
+        Response.ok("", "text/plain", "gzip")
+      else
+        Response.ok
+      end
     end
   end
 end

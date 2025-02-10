@@ -9,6 +9,11 @@ module HTTPServer
       @body = read_body if content_length > 0
     end
 
+    def accepts_gzip?
+      encoding = headers["Accept-Encoding"]
+      encoding && encoding.include?("gzip")
+    end
+
     private
 
     def parse_request_line
