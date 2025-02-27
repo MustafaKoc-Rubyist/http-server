@@ -19,10 +19,12 @@ module HTTPServer
     private
 
     def send_response(response)
+      status_line = "HTTP/1.1 #{response.status}"
+      headers = response.headers.map { |key, value| "#{key}: #{value}" }
+      
       http_response = [
-        "HTTP/1.1 #{response.status}",
-        "Content-Type: #{response.content_type}",
-        "Content-Length: #{response.body.bytesize}",
+        status_line,
+        *headers,
         "",
         response.body
       ].join("\r\n")

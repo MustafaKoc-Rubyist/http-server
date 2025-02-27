@@ -1,12 +1,15 @@
 module HTTPServer
   class Response
-    attr_reader :status, :body, :content_type, :content_encoding
+    attr_reader :status, :body, :headers
 
     def initialize(status:, body: "", content_type: "text/plain", content_encoding: nil)
       @status = status
       @body = body
-      @content_type = content_type
-      @content_encoding = content_encoding
+      @headers = {
+        "Content-Type" => content_type,
+        "Content-Length" => body.bytesize.to_s
+      }
+      @headers["Content-Encoding"] = content_encoding if content_encoding
     end
 
     class << self
